@@ -1,16 +1,28 @@
+// Copyright IBM Corp. 2015, 2025
+// SPDX-License-Identifier: MPL-2.0
+
 package uuid
 
 import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
 )
 
 // GenerateRandomBytes is used to generate random bytes of given size.
 func GenerateRandomBytes(size int) ([]byte, error) {
+	return GenerateRandomBytesWithReader(size, rand.Reader)
+}
+
+// GenerateRandomBytesWithReader is used to generate random bytes of given size read from a given reader.
+func GenerateRandomBytesWithReader(size int, reader io.Reader) ([]byte, error) {
+	if reader == nil {
+		return nil, fmt.Errorf("provided reader is nil")
+	}
 	buf := make([]byte, size)
-	if _, err := rand.Read(buf); err != nil {
-		return nil, fmt.Errorf("failed to read random bytes: %v", err)
+	if _, err := io.ReadFull(reader, buf); err != nil {
+		return nil, fmt.Errorf("failed to read random bytes: %w", err)
 	}
 	return buf, nil
 }
@@ -19,7 +31,15 @@ const uuidLen = 16
 
 // GenerateUUID is used to generate a random UUID
 func GenerateUUID() (string, error) {
-	buf, err := GenerateRandomBytes(uuidLen)
+	return GenerateUUIDWithReader(rand.Reader)
+}
+
+// GenerateUUIDWithReader is used to generate a random UUID with a given Reader
+func GenerateUUIDWithReader(reader io.Reader) (string, error) {
+	if reader == nil {
+		return "", fmt.Errorf("provided reader is nil")
+	}
+	buf, err := GenerateRandomBytesWithReader(uuidLen, reader)
 	if err != nil {
 		return "", err
 	}
@@ -40,7 +60,7 @@ func FormatUUID(buf []byte) (string, error) {
 }
 
 func ParseUUID(uuid string) ([]byte, error) {
-	if len(uuid) != 2 * uuidLen + 4 {
+	if len(uuid) != 2*uuidLen+4 {
 		return nil, fmt.Errorf("uuid string is wrong length")
 	}
 
